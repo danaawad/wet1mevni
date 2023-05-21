@@ -21,7 +21,7 @@ int main() {
         cout << id << " " << vip << endl;
     }
 
-    printf("hi dear");
+    printf("I,m hhhhhh");
 //    AvlTree<int> tree;
 //    AvlTree<Handler<Movie>> hand;
 //    Handler<Movie> m1(1);
