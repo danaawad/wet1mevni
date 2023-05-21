@@ -1,4 +1,4 @@
-// 
+//
 // 234218 Data Structures 1.
 // Semester: 2023B (spring).
 // Wet Exercise #1.
@@ -16,13 +16,25 @@
 #define STREAMINGDBA1_H_
 
 #include "wet1util.h"
+#include "AvlDana.h"
+#include "Users.h"
+#include "Movie.h"
+#include "MOVIEHandler.h"
 
 class streaming_database {
-private:
-	//
-	// Here you may add anything you want
-	//
-	
+protected:
+    AvlTree<Movie> comedyTree;
+    AvlTree<Movie> dramaTree;
+    AvlTree<Movie> actionTree;
+    AvlTree<Movie> fantasyTree;
+    AvlTree<Group> groupsTree;
+    AvlTree<Handler<Movie>> allMovies;
+
+    AvlTree<Movie>* genrePtrs[4];
+    int groupsInDatabase;
+    int usersInDatabase;
+    int moviesInDatabase[4];
+
 public:
 	// <DO-NOT-MODIFY> {
 	
@@ -59,6 +71,9 @@ public:
 	output_t<int> get_group_recommendation(int groupId);
 	
 	// } </DO-NOT-MODIFY>
+    AvlTree<User> usersTree;
 };
+
+
 
 #endif // STREAMINGDBA1_H_

@@ -6,17 +6,12 @@
 #define WET1_AVL_H
 
 template <class T>
-class Node{
+struct Node{
 public:
     T* obj;
     int height;
-    Node<T> *left;
-    Node<T> *right;
-
-    Node(T* obj) : obj(obj), height(1) {
-        left = nullptr;
-        right = nullptr;
-    }
+    struct Node<T> *left;
+    struct Node<T> *right;
 };
 
 template <class T>
