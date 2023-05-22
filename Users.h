@@ -55,6 +55,12 @@ public:
     friend bool operator==(const User& user1, const User& user2) {
         return (user1.userId == user2.userId);
     }
+    friend ostream& operator<<(ostream& os, const User& user)
+    {
+        os << "User id is " << user.userId << " ";
+        os << "User is " << user.isVip << " ";
+        return os;
+    }
 };
 
 class Group{
@@ -102,6 +108,7 @@ public:
     friend bool operator==(const Group& g1, const Group& g2) {
         return (g1.groupId == g2.groupId);
     }
+
 
 
 //    bool groupStillVip(int id)

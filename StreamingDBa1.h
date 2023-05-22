@@ -22,25 +22,34 @@
 #include "MOVIEHandler.h"
 
 class streaming_database {
+private:
+    Movie add_movie_Aux(int movieId, Genre genre, int views, bool vipOnly)
+    {
+        return Movie(movieId, genre, views, vipOnly);
+    }
 protected:
-    AvlTree<Movie> comedyTree;
     AvlTree<Movie> dramaTree;
     AvlTree<Movie> actionTree;
     AvlTree<Movie> fantasyTree;
     AvlTree<Group> groupsTree;
+    AvlTree<Movie> comedyTree;
     AvlTree<Handler<Movie>> allMovies;
 
-    AvlTree<Movie>* genrePtrs[4];
+    AvlTree<Movie>* genrePtrs[4]{};
     int groupsInDatabase;
     int usersInDatabase;
-    int moviesInDatabase[4];
-
+    int moviesInDatabase[4]{};
 public:
+
+    const int *getMoviesInDatabase() const;
+    void printMovieTree();
+    void printUsersTree();
+
 	// <DO-NOT-MODIFY> {
 	
 	streaming_database();
 
-	virtual ~streaming_database();
+	virtual ~streaming_database() = default;
 	
 	StatusType add_movie(int movieId, Genre genre, int views, bool vipOnly);
 	

@@ -15,10 +15,10 @@ private:
     int timesRated;
 
 public:
-    explicit Movie(int id) : movieId(id), genre(Genre::COMEDY), views(0), vipOnly(false), rating(0) {}
-    Movie(int movieId, Genre genre, int views, bool vipOnly, int rating =0) : movieId(movieId), genre(genre),
+//    explicit Movie(int id) : movieId(id), genre(Genre::COMEDY), views(0), vipOnly(false), rating(0) {}
+    Movie(int movieId, Genre genre, int views, bool vipOnly, int rating =0, int timesRated = 0) : movieId(movieId), genre(genre),
                                                                               views(views), vipOnly(vipOnly),
-                                                                              rating(rating), timesRated(0) {}
+                                                                              rating(rating), timesRated(timesRated) {}
 
     ~Movie() = default;
     friend bool operator<(const Movie& movie1, const Movie& movie2)
@@ -35,8 +35,7 @@ public:
     }
     friend bool operator==(const Movie& movie1, const Movie& movie2)
     {
-        if(movie1.movieId == movie2.movieId) return true;
-        return false;
+        return (movie1.movieId == movie2.movieId);
     }
     friend bool operator>(const Movie& movie1, const Movie& movie2)
     {

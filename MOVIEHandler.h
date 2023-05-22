@@ -48,6 +48,11 @@ public:
     int getKey() const {
         return key;
     }
+    friend ostream& operator<<(ostream& os, const Handler<T>& handler)
+    {
+        os << "Movie id is " << handler.getKey() << " ";
+        return os;
+    }
 };
 
 #endif //WET1_MOVIEHandler_H

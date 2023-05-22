@@ -35,8 +35,8 @@ public:
     Node<T>* RR_rotate(Node<T> *node);
     Node<T>* LR_rotate(Node<T> *node);
     Node<T>* RL_rotate(Node<T> *node);
-    Node<T>* insertNode(Node<T> *node, T* obj);
-    Node<T>* insert(T* obj);
+    Node<T>* insertNode(Node<T> *node, T* obj, int key);
+    Node<T>* insert(T* obj, int key);
     Node<T>* find(T* obj);
     Node<T>* findThroughKey(int key);
     void remove(T* obj);
@@ -58,19 +58,15 @@ public:
         }
     }
 
-    static void destroyTree(Node<T>* node)
-    {
-        if (node == nullptr) {
-            return;
+    void destroyTree(Node<T>* node) {
+        if (node != nullptr) {
+            destroyTree(node->left);
+            destroyTree(node->right);
+            delete node;
         }
-
-        destroyTree(node->left);
-        destroyTree(node->right);
-
-        delete node;
     }
 
-    static Node<T>* findMinNode(Node<T>* node)
+    Node<T>* findMinNode(Node<T>* node)
     {
         if (node == nullptr || node->left == nullptr) {
             return node;
@@ -78,12 +74,12 @@ public:
         return findMinNode(node->left);
     }
 
-    static int max(int x, int y)
+    int max(int x, int y)
     {
         return x > y ? x : y;
     }
 
-    static Node<T>* findThroughKeyAux(Node<T>* node, int key)
+    Node<T>* findThroughKeyAux(Node<T>* node, int key)
     {
         if (node == nullptr || (node->m_key) == key) {
             return node;
@@ -247,13 +243,13 @@ Node<T>* AvlTree<T>::LR_rotate(Node<T> *node)
 }
 
 template <class T>
-Node<T>* AvlTree<T>::insert(T *obj)
+Node<T>* AvlTree<T>::insert(T *obj, int key)
 {
-    return insertNode(root, obj);
+    return insertNode(root, obj, key);
 }
 
 template <class T>
-Node<T>* AvlTree<T>::insertNode(Node<T> *node, T* obj) {
+Node<T>* AvlTree<T>::insertNode(Node<T> *node, T* obj, int key) {
     // Find the correct postion and insert the node
     if (node == nullptr)
     {
@@ -262,12 +258,13 @@ Node<T>* AvlTree<T>::insertNode(Node<T> *node, T* obj) {
         {
             this->root = newNode;
         }
+        newNode->m_key = key;
         return newNode;
     }
     if (*obj < *(node->obj))
-        node->left = insertNode(node->left, obj);
+        node->left = insertNode(node->left, obj, key);
     else if (*obj > *(node->obj))
-        node->right = insertNode(node->right, obj);
+        node->right = insertNode(node->right, obj, key);
     else //*obj already exists
         return node;
 
@@ -298,6 +295,7 @@ Node<T>* AvlTree<T>::insertNode(Node<T> *node, T* obj) {
             return RR_rotate(node);
         }
     }
+    node->m_key = key;
     return node;
 }
 

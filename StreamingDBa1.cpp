@@ -9,26 +9,26 @@ streaming_database::streaming_database() : usersTree(), groupsTree(), allMovies(
     {
         moviesInDatabase[i] = 0;
     }
-    genrePtrs[0] = &(comedyTree);
-    genrePtrs[1]= &(dramaTree);
-    genrePtrs[2]= &(actionTree);
-    genrePtrs[3]= &(fantasyTree);
+    genrePtrs[0] = &comedyTree;
+    genrePtrs[1]= &dramaTree;
+    genrePtrs[2]= &actionTree;
+    genrePtrs[3]= &fantasyTree;
 }
 
-streaming_database::~streaming_database()
-{
-    for(int i=0; i<4; i++)
-    {
-        delete genrePtrs[i];
-    }
-    usersTree.~AvlTree();
-    groupsTree.~AvlTree();
-    comedyTree.~AvlTree();
-    dramaTree.~AvlTree();
-    actionTree.~AvlTree();
-    fantasyTree.~AvlTree();
-    allMovies.~AvlTree();
-}
+//streaming_database::~streaming_database()
+//{
+//    for(int i=0; i<4; i++)
+//    {
+//        delete genrePtrs[i];
+//    }
+//    usersTree.~AvlTree();
+//    groupsTree.~AvlTree();
+//    comedyTree.~AvlTree();
+//    dramaTree.~AvlTree();
+//    actionTree.~AvlTree();
+//    fantasyTree.~AvlTree();
+//    allMovies.~AvlTree();
+//}
 
 
 StatusType streaming_database::add_movie(int movieId, Genre genre, int views, bool vipOnly)
@@ -37,17 +37,17 @@ StatusType streaming_database::add_movie(int movieId, Genre genre, int views, bo
         return StatusType::INVALID_INPUT;
     }
     try {
-        Movie movie(movieId, genre, views, vipOnly, 0);
-        Handler<Movie> movieHandler(movieId, &movie);
-
+        Movie* movie = new Movie(movieId, genre, views, vipOnly);
+        Handler<Movie>* movieHandler = new Handler<Movie>(movieId, movie);
         int gen = static_cast<int>(genre);
-        if (genrePtrs[gen]->find(&movie) != nullptr)
+        if (genrePtrs[gen]->find(movie) != nullptr)
         {
+//            delete movie;
+//            delete movieHandler;
             return StatusType::FAILURE;
         }
-        genrePtrs[gen]->insert(&movie);
-        allMovies.insert(&movieHandler);
-
+        genrePtrs[gen]->insert(movie, movieId);
+        allMovies.insert(movieHandler, movieId);
         moviesInDatabase[gen]++;
     } catch (...) { return StatusType::ALLOCATION_ERROR; }
 
@@ -82,15 +82,15 @@ StatusType streaming_database::add_user(int userId, bool isVip)
         return StatusType::INVALID_INPUT;
     }
     try {
-        User newUser(userId, isVip);
-        if(usersTree.find(&newUser) != nullptr)
+        User* newUser = new User(userId, isVip);
+        if(usersTree.find(newUser) != nullptr)
         {
-            newUser.~User();
+            delete newUser;
             return StatusType::FAILURE;
         }
-        usersTree.insert(&newUser);
+        usersTree.insert(newUser, userId);
+        usersInDatabase++;
     } catch(...){ return StatusType::ALLOCATION_ERROR; }
-    usersInDatabase++;
     return StatusType::SUCCESS;
 }
 
@@ -155,7 +155,7 @@ StatusType streaming_database::add_group(int groupId)
         return StatusType::FAILURE;
     }
     try {
-        groupsTree.insert(&newGroup);
+        groupsTree.insert(&newGroup, 0);
     } catch(...){ return StatusType::ALLOCATION_ERROR; }
     groupsInDatabase++;
     return StatusType::SUCCESS;
@@ -219,7 +219,7 @@ StatusType streaming_database::add_user_to_group(int userId, int groupId)
     }
 
     try {
-        group->members.insert(user);
+        group->members.insert(user, 0);
         tmpUser.~User();
         tmpGroup.~Group();
     } catch(...) { return StatusType::ALLOCATION_ERROR; }
@@ -294,7 +294,7 @@ StatusType streaming_database::group_watch(int groupId,int movieId)
 
         movie->setViews(movie->getViews() + group->getNumOfMembers());
 
-        genreTree->insert(movie);
+        genreTree->insert(movie, 0);
 
     } catch (std::bad_alloc &e) { return StatusType::ALLOCATION_ERROR;}
 
@@ -453,7 +453,7 @@ StatusType streaming_database::rate_movie(int userId, int movieId, int rating)
         thisMovie->setRating(newAverage);
         thisMovie->incTimesRated(1);
 
-        genrePtrs[gen]->insert(thisMovie);
+        genrePtrs[gen]->insert(thisMovie, 0);
     } catch(...) { return StatusType::ALLOCATION_ERROR; }
 
     return StatusType::SUCCESS;
@@ -510,6 +510,20 @@ output_t<int> streaming_database::get_group_recommendation(int groupId)
 
 //    static int i = 0;
 //    return (i++==0) ? 11 : 2;
+}
+
+const int *streaming_database::getMoviesInDatabase() const {
+    return moviesInDatabase;
+}
+
+void streaming_database::printMovieTree()
+{
+    comedyTree.inorderPrint();
+}
+
+void streaming_database::printUsersTree()
+{
+    usersTree.inorderPrint();
 }
 
 
