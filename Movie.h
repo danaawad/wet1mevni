@@ -19,17 +19,30 @@ public:
     Movie(int movieId, Genre genre, int views, bool vipOnly, int rating =0, int timesRated = 0) : movieId(movieId), genre(genre),
                                                                               views(views), vipOnly(vipOnly),
                                                                               rating(rating), timesRated(timesRated) {}
-
+    Movie(const Movie& other) = default;
     ~Movie() = default;
+    Movie& operator=(const Movie& movie)
+    {
+        if(this == &movie)
+            return *this;
+        movieId = movie.getMovieId();
+        genre = movie.getGenre();
+        views = movie.getViews();
+        vipOnly = movie.isVipOnly();
+        rating = movie.getRating();
+        timesRated = movie.getTimesRated();
+        return *this;
+    }
     friend bool operator<(const Movie& movie1, const Movie& movie2)
     {
-        if(movie1.rating > movie2.rating) return false;
         if(movie1.rating < movie2.rating) return true;
         if(movie1.rating == movie2.rating)
         {
-            if(movie1.views > movie2.views) return false;
             if(movie1.views < movie2.views) return true;
-            if(movie1.views == movie2.views) return (movie1.movieId > movie2.movieId);
+            if(movie1.views == movie2.views) {
+                if (movie1.movieId > movie2.movieId)
+                    return true;
+            }
         }
         return false;
     }
@@ -39,13 +52,14 @@ public:
     }
     friend bool operator>(const Movie& movie1, const Movie& movie2)
     {
-        if(movie1.rating < movie2.rating) return false;
         if(movie1.rating > movie2.rating) return true;
         if(movie1.rating == movie2.rating)
         {
-            if(movie1.views < movie2.views) return false;
             if(movie1.views > movie2.views) return true;
-            if(movie1.views == movie2.views) return (movie1.movieId < movie2.movieId);
+            if(movie1.views == movie2.views) {
+                if (movie1.movieId < movie2.movieId)
+                    return true;
+            }
         }
         return false;
     }

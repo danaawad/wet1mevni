@@ -23,19 +23,51 @@
 
 class streaming_database {
 private:
-    Movie add_movie_Aux(int movieId, Genre genre, int views, bool vipOnly)
+
+    void modifyUsers(Node<User>* node, Genre genre)
     {
-        return Movie(movieId, genre, views, vipOnly);
+            if (node == nullptr)
+            {
+                return;
+            }
+        modifyUsers(node->left, genre);
+        node->obj->incGenreCount(genre);
+        modifyUsers(node->right, genre);
+
     }
+
+    void getUsersViews(Node<User>* node, int genre, int countArray[4])
+    {
+        if (node == nullptr)
+        {
+            return;
+        }
+        getUsersViews(node->left, genre, countArray);
+        countArray[genre] += node->obj->getGenreCount(static_cast<Genre>(genre));
+        getUsersViews(node->right, genre, countArray);
+    }
+
+    void setOutput(Node<Movie>* node, int *const output, int& i)
+    {
+        if (node == nullptr)
+        {
+            return;
+        }
+        setOutput(node->right, output, i);
+        output[i++] = node->obj->getMovieId();
+        setOutput(node->left, output, i);
+    }
+
 protected:
     AvlTree<Movie> dramaTree;
     AvlTree<Movie> actionTree;
     AvlTree<Movie> fantasyTree;
     AvlTree<Group> groupsTree;
     AvlTree<Movie> comedyTree;
+    AvlTree<Movie> noneTree;
     AvlTree<Handler<Movie>> allMovies;
 
-    AvlTree<Movie>* genrePtrs[4]{};
+    AvlTree<Movie>* genrePtrs[5]{};
     int groupsInDatabase;
     int usersInDatabase;
     int moviesInDatabase[4]{};
@@ -44,6 +76,8 @@ public:
     const int *getMoviesInDatabase() const;
     void printMovieTree();
     void printUsersTree();
+    void printHandlerTree();
+    void printGroupTree();
 
 	// <DO-NOT-MODIFY> {
 	

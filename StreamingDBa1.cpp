@@ -1,7 +1,7 @@
 #include "StreamingDBa1.h"
 
 streaming_database::streaming_database() : usersTree(), groupsTree(), allMovies(),
-        comedyTree(), dramaTree(), actionTree(), fantasyTree()
+        comedyTree(), dramaTree(), actionTree(), fantasyTree(), noneTree()
 {
     usersInDatabase = 0;
     groupsInDatabase = 0;
@@ -13,23 +13,9 @@ streaming_database::streaming_database() : usersTree(), groupsTree(), allMovies(
     genrePtrs[1]= &dramaTree;
     genrePtrs[2]= &actionTree;
     genrePtrs[3]= &fantasyTree;
+    genrePtrs[4]= &noneTree;
+
 }
-
-//streaming_database::~streaming_database()
-//{
-//    for(int i=0; i<4; i++)
-//    {
-//        delete genrePtrs[i];
-//    }
-//    usersTree.~AvlTree();
-//    groupsTree.~AvlTree();
-//    comedyTree.~AvlTree();
-//    dramaTree.~AvlTree();
-//    actionTree.~AvlTree();
-//    fantasyTree.~AvlTree();
-//    allMovies.~AvlTree();
-//}
-
 
 StatusType streaming_database::add_movie(int movieId, Genre genre, int views, bool vipOnly)
 {
@@ -42,12 +28,13 @@ StatusType streaming_database::add_movie(int movieId, Genre genre, int views, bo
         int gen = static_cast<int>(genre);
         if (genrePtrs[gen]->find(movie) != nullptr)
         {
-//            delete movie;
-//            delete movieHandler;
+            delete movie;
+            delete movieHandler;
             return StatusType::FAILURE;
         }
-        genrePtrs[gen]->insert(movie, movieId);
-        allMovies.insert(movieHandler, movieId);
+        genrePtrs[gen]->insert(movie);
+        noneTree.insert(movie);
+        allMovies.insert(movieHandler);
         moviesInDatabase[gen]++;
     } catch (...) { return StatusType::ALLOCATION_ERROR; }
 
@@ -61,13 +48,17 @@ StatusType streaming_database::remove_movie(int movieId)
         return StatusType::INVALID_INPUT;
     }
     try {
-        Handler<Movie> *movieHandler = allMovies.findThroughKey(movieId)->obj;
-        Movie *thisMovie = movieHandler->getElement();
-        if (thisMovie == nullptr) {
-            return StatusType::FAILURE;
-        }
+       Handler<Movie>* movieHandler = new Handler<Movie>(movieId);
+       if(allMovies.find(movieHandler) == nullptr)
+       {
+           delete movieHandler;
+           return StatusType::FAILURE;
+       }
+        Handler<Movie>* handlerToRemove = allMovies.find(movieHandler)->obj;
+        Movie *thisMovie = handlerToRemove->getElement();
         int genre = static_cast<int>(thisMovie->getGenre());
         genrePtrs[genre]->remove(thisMovie);
+        noneTree.remove(thisMovie);
         allMovies.remove(movieHandler);
         moviesInDatabase[genre]--;
     } catch(...) { return StatusType::ALLOCATION_ERROR; }
@@ -82,15 +73,15 @@ StatusType streaming_database::add_user(int userId, bool isVip)
         return StatusType::INVALID_INPUT;
     }
     try {
-        User* newUser = new User(userId, isVip);
+        User *newUser = new User(userId, isVip);
         if(usersTree.find(newUser) != nullptr)
         {
             delete newUser;
             return StatusType::FAILURE;
         }
-        usersTree.insert(newUser, userId);
-        usersInDatabase++;
-    } catch(...){ return StatusType::ALLOCATION_ERROR; }
+        usersTree.insert(newUser);
+    } catch(...) { return StatusType::ALLOCATION_ERROR; }
+    usersInDatabase++;
     return StatusType::SUCCESS;
 }
 
@@ -100,42 +91,33 @@ StatusType streaming_database::remove_user(int userId)
     {
         return StatusType::INVALID_INPUT;
     }
-    User tmpUser(userId);
-    if(usersTree.find(&tmpUser) == nullptr)
-    {
-        tmpUser.User::~User();
-        return StatusType::FAILURE;
-    }
-    User *userToRemove = usersTree.find(&tmpUser)->obj;
     try {
+        User *tmpUser = new User(userId);
+        if(usersTree.find(tmpUser) == nullptr)
+        {
+            delete tmpUser;
+            return StatusType::FAILURE;
+        }
+
+        User *userToRemove = usersTree.find(tmpUser)->obj;
         usersTree.remove(userToRemove);
+
+        /// if user was in group, remove him from it
         int groupId = userToRemove->getInGroupId();
-        //if user was in group, remove him from it
         if(groupId != 0)
         {
-            Group tmpGroup(groupId);
-            Group *group = groupsTree.find(&tmpGroup)->obj;
+            Group *tmpGroup = new Group(groupId);
+            Group *group = groupsTree.find(tmpGroup)->obj;
             group->members.remove(userToRemove);
             group->setNumOfMembers(group->getNumOfMembers()-1);
             //check if group remains vip
             if(userToRemove->getIsVip())
-            {
-                group->setGroupIsVip(false);
-                for (ReverseInorderIterator<User> it = reverse_inorder_begin(group->members.root);
-                     it != reverse_inorder_end<User>(); ++it)
-                {
-                    if(it.getCurrent()->obj->getIsVip())
-                    {
-                        group->setGroupIsVip(true);
-                        break;
-                    }
-                }
-            }
-            tmpGroup.~Group();
+                group->setGroupIsVip(group->getGroupIsVip() - 1);
+            delete tmpUser;
+            delete tmpGroup;
         }
 
-        userToRemove->~User();
-        tmpUser.~User();
+//        userToRemove->~User();
     } catch(...){ return StatusType::ALLOCATION_ERROR; }
 
     usersInDatabase--;
@@ -148,14 +130,14 @@ StatusType streaming_database::add_group(int groupId)
     {
         return StatusType::INVALID_INPUT;
     }
-    Group newGroup(groupId);
-    if(groupsTree.find(&newGroup) != nullptr)
+    Group *newGroup = new Group(groupId);
+    if(groupsTree.find(newGroup) != nullptr)
     {
-        newGroup.~Group();
+        delete newGroup;
         return StatusType::FAILURE;
     }
     try {
-        groupsTree.insert(&newGroup, 0);
+        groupsTree.insert(newGroup);
     } catch(...){ return StatusType::ALLOCATION_ERROR; }
     groupsInDatabase++;
     return StatusType::SUCCESS;
@@ -167,24 +149,26 @@ StatusType streaming_database::remove_group(int groupId)
     {
         return StatusType::INVALID_INPUT;
     }
-    Group tmpGroup(groupId);
-    if(groupsTree.find(&tmpGroup) != nullptr)
+    Group *group = new Group(groupId);
+    if(groupsTree.find(group) == nullptr)
     {
-        tmpGroup.~Group();
+        delete group;
         return StatusType::FAILURE;
     }
-    Group *group = groupsTree.find(&tmpGroup)->obj;
-    Node<User> *currentUser = group->members.getFirstInOrder();
-    tmpGroup.~Group();
-
-    //setting user.inGroupId = 0 to all members in the group and deleting members tree
+    Group *groupToRemove = groupsTree.find(group)->obj;
     try {
-        while (currentUser != nullptr) {
-            currentUser->obj->setInGroupId(0);
-            group->members.remove(currentUser->obj);
-            currentUser = group->members.getFirstInOrder();
+//        User *currentUser = group->members.getFirstInOrder()->obj;
+
+        //setting user.inGroupId = 0 to all members in the group and deleting members tree
+
+        while (group->members.getFirstInOrder() != nullptr) {
+            User *currentUser = groupToRemove->members.getFirstInOrder()->obj;
+            currentUser->setInGroupId(0);
+            groupToRemove->members.remove(currentUser);
+            delete currentUser;
         }
-        groupsTree.remove(group);
+        groupsTree.remove(groupToRemove);
+        delete group;
     } catch(...) { return StatusType::ALLOCATION_ERROR; }
 
     groupsInDatabase--;
@@ -198,34 +182,39 @@ StatusType streaming_database::add_user_to_group(int userId, int groupId)
     {
         return StatusType::INVALID_INPUT;
     }
-    User tmpUser(userId);
-    Group tmpGroup(groupId);
-    if(usersTree.find(&tmpUser) == nullptr || groupsTree.find(&tmpGroup) == nullptr)
-    {
-        return StatusType::FAILURE; //user or group not in database
-    }
-
-    User *user = usersTree.find(&tmpUser)->obj;
-    Group *group = groupsTree.find(&tmpGroup)->obj;
-
-    if(user->getInGroupId() != 0)
-    {
-        return StatusType::FAILURE; // user already in other group
-    }
-
-    if(user->getIsVip())
-    {
-        group->setGroupIsVip(true);
-    }
 
     try {
-        group->members.insert(user, 0);
-        tmpUser.~User();
-        tmpGroup.~Group();
+        User *tmpUser = new User(userId);
+        Group *tmpGroup = new Group(groupId);
+        if(usersTree.find(tmpUser) == nullptr || groupsTree.find(tmpGroup) == nullptr)
+        {
+            delete tmpUser;
+            delete tmpGroup;
+            return StatusType::FAILURE; //user or group not in database
+        }
+
+        User *user = usersTree.find(tmpUser)->obj;
+        Group *group = groupsTree.find(tmpGroup)->obj;
+
+        if(user->getInGroupId() != 0)
+        {
+            return StatusType::FAILURE; // user already in other group
+        }
+
+        if(user->getIsVip())
+        {
+            group->setGroupIsVip(group->getGroupIsVip()+1);
+        }
+
+        group->members.insert(user);
+        user->setInGroupId(groupId);
+        group->setNumOfMembers(group->getNumOfMembers()+1);
+
+        delete tmpUser;
+        delete tmpGroup;
+
     } catch(...) { return StatusType::ALLOCATION_ERROR; }
 
-    user->setInGroupId(groupId);
-    group->setNumOfMembers(group->getNumOfMembers()+1);
     return StatusType::SUCCESS;
 }
 
@@ -236,24 +225,41 @@ StatusType streaming_database::user_watch(int userId, int movieId)
         return StatusType::INVALID_INPUT;
     }
     //find movie and user in database
-    User tmpUser(userId);
+    User* tmpUser = new User(userId);
+    Handler<Movie>* tmpHandler = new Handler<Movie>(movieId);
 //    Movie tmpMovie(movieId);
-    if(usersTree.find(&tmpUser) == nullptr || allMovies.findThroughKey(movieId) == nullptr)
+    if(usersTree.find(tmpUser) == nullptr || allMovies.find(tmpHandler) == nullptr)
     {
+        delete tmpUser;
+        delete tmpHandler;
         return StatusType::FAILURE; //user or movie not in database
     }
 
-    User *user = usersTree.find(&tmpUser)->obj;
-    Movie *movie = allMovies.findThroughKey(movieId)->obj->getElement();
+    User *user = usersTree.find(tmpUser)->obj;
+    Movie *movie = allMovies.find(tmpHandler)->obj->getElement();
 
     if( movie->isVipOnly() && !(user->getIsVip()) )
     {
+        delete tmpUser;
+        delete tmpHandler;
         return StatusType::FAILURE;
     }
+    Genre genre = movie->getGenre();
+    user->incGenreCount(genre);
+
+
+    AvlTree<Movie>* genTree = genrePtrs[static_cast<int>(genre)];
+    genTree->remove(movie);
+    noneTree.remove(movie);
 
     movie->setViews(movie->getViews()+1);
-    tmpUser.~User();
 
+    genTree->insert(movie);
+    noneTree.insert(movie);
+
+
+    delete tmpUser;
+    delete tmpHandler;
     return StatusType::SUCCESS;
 }
 
@@ -264,42 +270,44 @@ StatusType streaming_database::group_watch(int groupId,int movieId)
         return StatusType::INVALID_INPUT;
     }
 
-    Group tmpGroup(groupId);
-
-    if(groupsTree.find(&tmpGroup) == nullptr || allMovies.findThroughKey(movieId) == nullptr)
+    Group* tmpGroup = new Group(groupId);
+    Handler<Movie>* tmpHandler = new Handler<Movie>(movieId);
+    if(groupsTree.find(tmpGroup) == nullptr || allMovies.find(tmpHandler) == nullptr)
     {
+        delete tmpGroup;
+        delete tmpHandler;
         return StatusType::FAILURE;
     }
-
     try {
-        Group *group = groupsTree.find(&tmpGroup)->obj;
-        Movie *movie = allMovies.findThroughKey(movieId)->obj->getElement();
+        Group *group = groupsTree.find(tmpGroup)->obj;
+        Movie *movie = allMovies.find(tmpHandler)->obj->getElement();
         Genre currGenre = movie->getGenre();
-
         if (movie->isVipOnly() && !(group->getGroupIsVip())) {
+            delete tmpGroup;
+            delete tmpHandler;
             return StatusType::FAILURE;
         }
-
-        tmpGroup = *group;     /// or use the reverse inorder iterator
-        Node<User> *currentUser = tmpGroup.members.getFirstInOrder();
-        while (currentUser != nullptr) {
-            currentUser->obj->incGenreCount(currGenre);
-            tmpGroup.members.remove(currentUser->obj);
-            currentUser = group->members.getFirstInOrder();
-        }
+        Node<User>* root = group->members.root;
+        modifyUsers(root, currGenre);
 
         //remove movie from genre tree then insert again, so the genre tree remains balanced
-        AvlTree<Movie> *genreTree = (genrePtrs[int(currGenre)]);
-        genreTree->remove(movie);
+        genrePtrs[int(currGenre)]->remove(movie);
+        noneTree.remove(movie);
 
         movie->setViews(movie->getViews() + group->getNumOfMembers());
 
-        genreTree->insert(movie, 0);
+        genrePtrs[int(currGenre)]->insert(movie);
+        noneTree.insert(movie);
 
     } catch (std::bad_alloc &e) { return StatusType::ALLOCATION_ERROR;}
 
+    delete tmpGroup;
+    delete tmpHandler;
 	return StatusType::SUCCESS;
 }
+
+
+
 
 output_t<int> streaming_database::get_all_movies_count(Genre genre)
 {
@@ -328,81 +336,18 @@ StatusType streaming_database::get_all_movies(Genre genre, int *const output)
     }
     int gen = static_cast<int>(genre);
     int sumMovies = (get_all_movies_count(genre)).ans();
-    if(genre != Genre::NONE)
+
+    if(sumMovies == 0)
     {
-        if(sumMovies == 0)
-        {
-            return StatusType::FAILURE;
-        }
-        try {
-            AvlTree<Movie> *genTree = genrePtrs[gen];
-            int curr = 0;
-            for (ReverseInorderIterator<Movie> it = reverse_inorder_begin(genTree->root);
-                 it != reverse_inorder_end<Movie>(); ++it) {
-                output[curr] = it.getCurrent()->obj->getMovieId();
-                curr++;
-            }
-        } catch(std::bad_alloc &e) { return StatusType::ALLOCATION_ERROR; }
-        return StatusType::SUCCESS;
+        return StatusType::FAILURE;
     }
-    else {
-        if (sumMovies == 0) {
-            return StatusType::FAILURE;
-        }
-        try {
-            Movie **arr = new Movie *[4];
-            for (int i = 0; i < 4; i++) {
-                int size = get_all_movies_count(static_cast<Genre>(i)).ans();
-                arr[i] = *new Movie *[size];
+    try {
+        AvlTree<Movie> *genTree = genrePtrs[gen];
+        Node<Movie>* root = genTree->root;
+        int i = 0;
+        setOutput(root, output, i);
+    } catch(...) { return StatusType::ALLOCATION_ERROR; }
 
-                AvlTree<Movie> *currTree = genrePtrs[i];
-                // Assign the movie ids to the array
-                int j = 0;
-                for (ReverseInorderIterator<Movie> it = reverse_inorder_begin(currTree->root);
-                     it != reverse_inorder_end<Movie>(); ++it) {
-                    arr[i][j] = *(it.getCurrent()->obj);
-                    j++;
-                }
-            }
-
-
-            //merge the 4 arrays
-            for (int i = 0; i < sumMovies; i++) {
-                int comedy = 0, action = 0, drama = 0, fantasy = 0;
-                if (arr[0][comedy] < arr[1][action]
-                    && arr[0][comedy] < arr[2][drama]
-                    && arr[0][comedy] < arr[3][fantasy]) {
-                    output[i] = arr[0][comedy].getMovieId();
-                    comedy++;
-                }
-                if (arr[1][action] < arr[0][comedy]
-                    && arr[1][action] < arr[2][drama]
-                    && arr[1][action] < arr[3][fantasy]) {
-                    output[i] = arr[1][action].getMovieId();
-                    action++;
-                }
-                if (arr[2][drama] < arr[0][comedy]
-                    && arr[2][drama] < arr[1][action]
-                    && arr[2][drama] < arr[3][fantasy]) {
-                    output[i] = arr[2][drama].getMovieId();
-                    drama++;
-                }
-                if (arr[3][fantasy] < arr[0][comedy]
-                    && arr[3][fantasy] < arr[1][action]
-                    && arr[3][fantasy] < arr[2][drama]) {
-                    output[i] = arr[3][fantasy].getMovieId();
-                    fantasy++;
-                }
-            }
-            //output array is loaded
-
-
-            for (int i = 0; i < 4; i++) {
-                delete[] arr[i];
-            }
-            delete[] arr;
-        } catch (std::bad_alloc &e) { return StatusType::ALLOCATION_ERROR; }
-    }
     return StatusType::SUCCESS;
 }
 
@@ -412,15 +357,15 @@ output_t<int> streaming_database::get_num_views(int userId, Genre genre)
     {
         return output_t<int>(StatusType::INVALID_INPUT);
     }
-	User tmpUser(userId);
-    if(usersTree.find(&tmpUser) == nullptr)
+    User *tmpUser = new User(userId);
+    if(usersTree.find(tmpUser) == nullptr)
     {
-        tmpUser.~User();
+        delete tmpUser;
         return output_t<int>(StatusType::FAILURE);
     }
-    User *thisUser = usersTree.find(&tmpUser)->obj;
+    User *thisUser = usersTree.find(tmpUser)->obj;
     int views = thisUser->getGenreCount(genre);
-    tmpUser.~User();
+    delete tmpUser;
     return output_t<int>(views);
 }
 
@@ -430,35 +375,47 @@ StatusType streaming_database::rate_movie(int userId, int movieId, int rating)
     {
         return StatusType::INVALID_INPUT;
     }
-    User tmpUser(userId);
-    Handler<Movie> movieHandler(movieId);
-    if(usersTree.find(&tmpUser) == nullptr || allMovies.findThroughKey(movieId) == nullptr)
+    User *tmpUser = new User(userId);
+    Handler<Movie> *movieHandler = new Handler<Movie>(movieId);
+    if(usersTree.find(tmpUser) == nullptr || allMovies.find(movieHandler) == nullptr)
     {
+        delete tmpUser;
+        delete movieHandler;
         return StatusType::FAILURE;
     }
-    User *thisUser = usersTree.find(&tmpUser)->obj;
-    Movie *thisMovie = allMovies.findThroughKey(movieId)->obj->getElement();
+    User *thisUser = usersTree.find(tmpUser)->obj;
+    Handler<Movie> *thisHandler = allMovies.find(movieHandler)->obj;
+    Movie *thisMovie = thisHandler->getElement();
     if (thisMovie->isVipOnly() && !(thisUser->getIsVip()) )
     {
+        delete tmpUser;
+        delete movieHandler;
         return StatusType::FAILURE;
     }
 
     //rating is ok, user and movie exist
     try {
         int gen = static_cast<int>(thisMovie->getGenre());
+
         genrePtrs[gen]->remove(thisMovie);
+        noneTree.remove(thisMovie);
 
-        int num = thisMovie->getTimesRated();
-        int newAverage = ((thisMovie->getRating() * num) + rating) / (num + 1);
-        thisMovie->setRating(newAverage);
-        thisMovie->incTimesRated(1);
 
-        genrePtrs[gen]->insert(thisMovie, 0);
+        Movie *newMovie = thisHandler->getElement();
+        int num = newMovie->getTimesRated();
+        int newAverage = ((newMovie->getRating() * num) + rating) / (num + 1);
+        newMovie->setRating(newAverage);
+        newMovie->incTimesRated(1);
+
+        genrePtrs[gen]->insert(newMovie);
+        noneTree.insert(newMovie);
+
+        delete tmpUser;
+        delete movieHandler;
     } catch(...) { return StatusType::ALLOCATION_ERROR; }
 
     return StatusType::SUCCESS;
 }
-
 output_t<int> streaming_database::get_group_recommendation(int groupId)
 {
     if(groupId <= 0)
@@ -466,30 +423,25 @@ output_t<int> streaming_database::get_group_recommendation(int groupId)
         return output_t<int>(StatusType::INVALID_INPUT);
     }
 
-    Group tmpGroup(groupId);
-    if(groupsTree.find(&tmpGroup) == nullptr)
+    Group *tmpGroup = new Group(groupId);
+    if(groupsTree.find(tmpGroup) == nullptr)
     {
-        tmpGroup.~Group();
+        delete tmpGroup;
         return output_t<int>(StatusType::FAILURE);
     }
 
-    Group *thisGroup = groupsTree.find(&tmpGroup)->obj;
+    Group *thisGroup = groupsTree.find(tmpGroup)->obj;
     if(thisGroup->members.root == nullptr)
     {
-        tmpGroup.~Group();
-        return output_t<int>(StatusType::FAILURE);
+        delete tmpGroup;
+        return output_t<int>(StatusType::FAILURE); ///group is empty
     }
-
     int countArray[]{0,0,0,0};
-    int val = 0;
-    for (ReverseInorderIterator<User> it = reverse_inorder_begin(thisGroup->members.root);
-         it != reverse_inorder_end<User>(); ++it)
+
+    Node<User>* root = thisGroup->members.root;
+    for(int i=0; i<4; i++)
     {
-        for(int i=0; i<4; i++)
-        {
-            val = it.getCurrent()->obj->genreCountIdx(i);
-            countArray[i] += val;
-        }
+        getUsersViews(root, i, countArray);
     }
     int max = countArray[0];
     int idx = 0;
@@ -503,13 +455,10 @@ output_t<int> streaming_database::get_group_recommendation(int groupId)
     }
 
     AvlTree<Movie>* tree = genrePtrs[idx];
-    ReverseInorderIterator<Movie> resultMovie = reverse_inorder_begin(tree->root);
-    int res = resultMovie.getCurrent()->obj->getMovieId();
+    Movie* resultMovie = tree->getLastInOrder()->obj;
+    int res = resultMovie->getMovieId();
 
     return output_t<int>(res);
-
-//    static int i = 0;
-//    return (i++==0) ? 11 : 2;
 }
 
 const int *streaming_database::getMoviesInDatabase() const {
@@ -519,11 +468,26 @@ const int *streaming_database::getMoviesInDatabase() const {
 void streaming_database::printMovieTree()
 {
     comedyTree.inorderPrint();
+    cout << '\n' << moviesInDatabase[0] << endl;
+
+    return;
 }
 
 void streaming_database::printUsersTree()
 {
+    cout << "hello" << endl;
     usersTree.inorderPrint();
+    cout << usersInDatabase << endl;
+    return;
+//    usersTree.root->obj->printComedyWatches();
 }
 
+void streaming_database::printHandlerTree()
+{
+    allMovies.inorderPrint();
+}
 
+void streaming_database::printGroupTree()
+{
+    groupsTree.root->obj->printMembers();
+}

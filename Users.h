@@ -46,6 +46,7 @@ public:
 
 
 
+
     friend bool operator<(const User& user1, const User& user2) {
         return (user1.userId < user2.userId);
     }
@@ -58,15 +59,20 @@ public:
     friend ostream& operator<<(ostream& os, const User& user)
     {
         os << "User id is " << user.userId << " ";
-        os << "User is " << user.isVip << " ";
+        os << "User is " << user.isVip << '\n';
         return os;
+    }
+
+    void printComedyWatches()
+    {
+        cout << "user watched" << this->genreCount[0] << '\n';
     }
 };
 
 class Group{
 private:
     int groupId;
-    bool groupIsVip;
+    int groupIsVip;
     int numOfMembers;
 
 public:
@@ -99,6 +105,7 @@ public:
         Group::numOfMembers = numOfMembers;
     }
 
+
     friend bool operator<(const Group& g1, const Group& g2) {
         return (g1.groupId < g2.groupId);
     }
@@ -107,6 +114,11 @@ public:
     }
     friend bool operator==(const Group& g1, const Group& g2) {
         return (g1.groupId == g2.groupId);
+    }
+
+    void printMembers()
+    {
+        members.inorderPrint();
     }
 
 

@@ -35,13 +35,15 @@ public:
     Node<T>* RR_rotate(Node<T> *node);
     Node<T>* LR_rotate(Node<T> *node);
     Node<T>* RL_rotate(Node<T> *node);
-    Node<T>* insertNode(Node<T> *node, T* obj, int key);
-    Node<T>* insert(T* obj, int key);
+    Node<T>* insertNode(Node<T> *node, T* obj);
+    Node<T>* insert(T* obj);
     Node<T>* find(T* obj);
-    Node<T>* findThroughKey(int key);
     void remove(T* obj);
     Node<T>* getFirstNodeInOrder(Node<T>* node);
     Node<T>* getFirstInOrder();
+    Node<T>* getLastNodeInOrder(Node<T>* node);
+    Node<T>* getLastInOrder();
+
 
 
     //help functions
@@ -79,18 +81,7 @@ public:
         return x > y ? x : y;
     }
 
-    Node<T>* findThroughKeyAux(Node<T>* node, int key)
-    {
-        if (node == nullptr || (node->m_key) == key) {
-            return node;
-        }
 
-        if (key < (node->m_key)) {
-            return findThroughKeyAux(node->left, key);
-        } else {
-            return findThroughKeyAux(node->right, key);
-        }
-    }
 
     void inorderPrintAux(Node<T>* node)
     {
@@ -137,7 +128,7 @@ public:
             else
             {
                 Node<T>* temp = findMinNode(node->right);
-                *(node->obj) = *(temp->obj);
+                node->obj = temp->obj;
                 node->right = removeNode(node->right, temp->obj);
             }
         }
@@ -243,13 +234,13 @@ Node<T>* AvlTree<T>::LR_rotate(Node<T> *node)
 }
 
 template <class T>
-Node<T>* AvlTree<T>::insert(T *obj, int key)
+Node<T>* AvlTree<T>::insert(T *obj)
 {
-    return insertNode(root, obj, key);
+    return insertNode(root, obj);
 }
 
 template <class T>
-Node<T>* AvlTree<T>::insertNode(Node<T> *node, T* obj, int key) {
+Node<T>* AvlTree<T>::insertNode(Node<T> *node, T* obj) {
     // Find the correct postion and insert the node
     if (node == nullptr)
     {
@@ -258,15 +249,15 @@ Node<T>* AvlTree<T>::insertNode(Node<T> *node, T* obj, int key) {
         {
             this->root = newNode;
         }
-        newNode->m_key = key;
         return newNode;
     }
+
     if (*obj < *(node->obj))
-        node->left = insertNode(node->left, obj, key);
+        node->left = insertNode(node->left, obj);
     else if (*obj > *(node->obj))
-        node->right = insertNode(node->right, obj, key);
-    else //*obj already exists
-        return node;
+        node->right = insertNode(node->right, obj);
+    else
+        node->obj = obj;
 
     // Update the balance factor of each node and
     // balance the tree
@@ -295,7 +286,6 @@ Node<T>* AvlTree<T>::insertNode(Node<T> *node, T* obj, int key) {
             return RR_rotate(node);
         }
     }
-    node->m_key = key;
     return node;
 }
 
@@ -311,11 +301,6 @@ void AvlTree<T>::remove(T* obj)
     root = removeNode(root, obj);
 }
 
-template <class T>
-Node<T>* AvlTree<T>::findThroughKey(int key)
-{
-    return findThroughKeyAux(root, key);
-}
 
 template<class T>
 AvlTree<T>::~AvlTree()
@@ -349,73 +334,19 @@ Node<T>* AvlTree<T>::getFirstNodeInOrder(Node<T>* node) {
 
 
 template<class T>
-class ReverseInorderIterator {
-private:
-    Node<T>* root;
-    Node<T>* current;
-    Node<T>* prev;
-    bool finished;
-
-    void reverseInorder(Node<T>* node) {
-        if (node == nullptr) {
-            return;
-        }
-
-        reverseInorder(node->right);
-
-        if (!finished) {
-            current = node;
-            finished = true;
-            return;
-        }
-
-        prev = node;
-        reverseInorder(node->left);
-    }
-
-public:
-    ReverseInorderIterator(Node<T>* rootNode) : root(rootNode), current(nullptr), prev(nullptr), finished(false) {
-        reverseInorder(root);
-    }
-
-    ReverseInorderIterator& operator++() {
-        if (current == nullptr) {
-            return *this;
-        }
-
-        if (prev != nullptr) {
-            current = prev;
-            prev = nullptr;
-            return *this;
-        }
-
-        finished = false;
-        reverseInorder(root);
-
-        return *this;
-    }
-
-    bool operator!=(const ReverseInorderIterator& other) const {
-        return current != other.current;
-    }
-
-    const T& operator*() const {
-        return current->data;
-    }
-
-    Node<T> *getCurrent() const {
-        return current;
-    }
-};
-
-template<class T>
-ReverseInorderIterator<T> reverse_inorder_begin(Node<T>* root) {
-    return ReverseInorderIterator<T>(root);
+Node<T>* AvlTree<T>::getLastInOrder(){
+    return getLastNodeInOrder(this->root);
 }
 
 template<class T>
-ReverseInorderIterator<T> reverse_inorder_end() {
-    return ReverseInorderIterator<T>(nullptr);
+Node<T>* AvlTree<T>::getLastNodeInOrder(Node<T>* node) {
+    if (root == nullptr) {
+        return nullptr;
+    }
+    Node<T>* current = root;
+    while (current->right != nullptr) {
+        current = current->right;
+    }
+    return current;
 }
-
 #endif //WET1_AVL_H

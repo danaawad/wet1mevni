@@ -14,6 +14,18 @@ private:
 
 public:
     explicit Handler<T>(int key = -1, T* element = nullptr) : key(key), element(element) {} ;
+
+    Handler(const Handler& other) : key(other.key), element(nullptr) {
+        if (other.element != nullptr) {
+            element = new T(*other.element);
+        }
+    }
+
+    ~Handler()
+    {
+        delete element;
+    }
+
     Handler<T>& operator=(const Handler& handler)
     {
         if(this == &handler)
@@ -23,19 +35,19 @@ public:
         element = handler.getElement();
         return *this;
     }
-    ~Handler() = default;
+
 
     friend bool operator<(const Handler& Handler1, const Handler& Handler2)
     {
-        return (Handler1.key < Handler2.key && Handler1.element != nullptr &&  Handler2.element != nullptr);
+        return (Handler1.key < Handler2.key);
     }
     friend bool operator>(const Handler& Handler1, const Handler& Handler2)
     {
-        return (Handler1.key > Handler2.key && Handler1.element != nullptr &&  Handler2.element != nullptr);
+        return (Handler1.key > Handler2.key);
     }
     friend bool operator==(const Handler& Handler1, const Handler& Handler2)
     {
-        return (Handler1.key == Handler2.key && Handler1.element != nullptr &&  Handler2.element != nullptr);
+        return (Handler1.key == Handler2.key);
     }
 
 
